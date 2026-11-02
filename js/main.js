@@ -81,8 +81,46 @@ async function participantsPage(){
  $("#newPerson").onclick=()=>showModal(`<h3>Nuevo participante</h3><form id="personForm" class="stack">
  <label>Nombre<input name="first_name" required></label><label>Apellidos<input name="last_name" required></label>
  <label>Email<input name="email" type="email" required></label><button class="primary">Crear</button></form>`);
- setTimeout(()=>{const f=$("#personForm");if(f)f.onsubmit=async e=>{e.preventDefault();const o=Object.fromEntries(new FormData(f));await Repository.createPerson({...o,organization_id:currentOrgId,status:"active"});modal.close();participantsPage();}},0);
-}
+ setTimeout(() => {
+  const f = $("#personForm");
+
+  if (f) {
+    f.onsubmit = async e => {
+      e.preventDefault();
+
+      const button = f.querySelector("button");
+      const originalText = button.textContent;
+
+      try {
+        button.disabled = true;
+        button.textContent = "Guardando...";
+
+        const o = Object.fromEntries(new FormData(f));
+
+        await Repository.createPerson({
+          ...o,
+          organization_id: currentOrgId,
+          status: "active"
+        });
+
+        modal.close();
+        await participantsPage();
+
+      } catch (err) {
+        alert(
+          "No se pudo registrar al participante:\n\n" +
+          err.message
+        );
+
+        console.error("AXION LMS createPerson:", err);
+
+      } finally {
+        button.disabled = false;
+        button.textContent = originalText;
+      }
+    };
+  }
+}, 0);
 
 async function coursesPage(){
  header("Cursos","Catálogo y estructura de aprendizaje",`<button class="primary" id="newCourse">Nuevo curso</button>`);
