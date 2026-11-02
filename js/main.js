@@ -121,7 +121,7 @@ async function participantsPage(){
     };
   }
 }, 0);
-
+}
 async function coursesPage(){
  header("Cursos","Catálogo y estructura de aprendizaje",`<button class="primary" id="newCourse">Nuevo curso</button>`);
  const rows=await Repository.listCourses(currentOrgId);
