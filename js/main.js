@@ -222,9 +222,9 @@ async function renderAssessment(en){
 }
 
 function certificateHtml(c){
- return `<div class="certificate"><p>AXION LMS</p><h1>Certificado de finalización</h1><p>Se certifica que</p>
- <h2>${escapeHtml(c.person.first_name)} ${escapeHtml(c.person.last_name)}</h2><p>completó satisfactoriamente</p><h3>${escapeHtml(c.course.title)}</h3>
- <p class="folio">Folio: ${escapeHtml(c.folio)}</p><p>Emitido: ${new Date(c.issued_at).toLocaleString()}</p></div>`;
+  return `<div class="certificate"><p>AXION LMS</p><h1>Certificado de finalización</h1><p>Se certifica que</p>
+  <h2>${escapeHtml(c.person.first_name)} ${escapeHtml(c.person.last_name)}</h2><p>completó satisfactoriamente</p><h3>${escapeHtml(c.course.title)}</h3>
+  <p class="folio">Folio: ${escapeHtml(c.folio)}</p><p>Emitido: ${new Date(c.issued_at).toLocaleString()}</p></div>`;
 }
 
 Repository.onAuth(boot);
