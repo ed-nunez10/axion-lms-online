@@ -73,68 +73,344 @@ async function adminDashboard(){
 }
 
 async function participantsPage(){
- header("Participantes","Personas de la empresa",`<button class="primary" id="newPerson">Nuevo participante</button>`);
- const rows=await Repository.listPersons(currentOrgId);
- content.innerHTML=`<div class="card table-wrap"><table class="table"><thead><tr><th>Nombre</th><th>Email</th><th>Estado</th></tr></thead><tbody>
- ${rows.map(p=>`<tr><td>${escapeHtml(p.first_name)} ${escapeHtml(p.last_name)}</td><td>${escapeHtml(p.email)}</td><td><span class="badge">${escapeHtml(p.status)}</span></td></tr>`).join("")||`<tr><td colspan="3">Sin participantes.</td></tr>`}
- </tbody></table></div>`;
- $("#newPerson").onclick=()=>showModal(`<h3>Nuevo participante</h3><form id="personForm" class="stack">
- <label>Nombre<input name="first_name" required></label><label>Apellidos<input name="last_name" required></label>
- <label>Email<input name="email" type="email" required></label><button class="primary">Crear</button></form>`);
- setTimeout(() => {
-  const f = $("#personForm");
+  header(
+    "Participantes",
+    "Personas de la empresa",
+    `<button class="primary" id="newPerson">Nuevo participante</button>`
+  );
 
-  if (f) {
-    f.onsubmit = async e => {
+  const rows = await Repository.listPersons(currentOrgId);
+
+  content.innerHTML = `
+    <div class="card table-wrap">
+      <table class="table">
+        <thead>
+          <tr>
+            <th>Nombre</th>
+            <th>Email</th>
+            <th>Estado</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${
+            rows.map(p => `
+              <tr>
+                <td>${escapeHtml(p.first_name)} ${escapeHtml(p.last_name)}</td>
+                <td>${escapeHtml(p.email)}</td>
+                <td><span class="badge">${escapeHtml(p.status)}</span></td>
+              </tr>
+            `).join("")
+            ||
+            `<tr><td colspan="3">Sin participantes.</td></tr>`
+          }
+        </tbody>
+      </table>
+    </div>
+  `;
+
+  $("#newPerson").onclick = () => {
+
+    showModal(`
+      <h3>Nuevo participante</h3>
+
+      <form id="personForm" class="stack">
+
+        <label>
+          Nombre
+          <input name="first_name" required>
+        </label>
+
+        <label>
+          Apellidos
+          <input name="last_name" required>
+        </label>
+
+        <label>
+          Email
+          <input name="email" type="email" required>
+        </label>
+
+        <button type="submit" class="primary">
+          Crear
+        </button>
+
+      </form>
+    `);
+
+    const f = $("#personForm");
+
+    f.addEventListener("submit", async e => {
+
       e.preventDefault();
+      e.stopPropagation();
 
-      const button = f.querySelector("button");
+      const button = f.querySelector('button[type="submit"]');
       const originalText = button.textContent;
 
       try {
+
         button.disabled = true;
         button.textContent = "Guardando...";
 
-        const o = Object.fromEntries(new FormData(f));
+        const formData = new FormData(f);
 
-        await Repository.createPerson({
-          ...o,
+        const participant = {
+          first_name: formData.get("first_name").trim(),
+          last_name: formData.get("last_name").trim(),
+          email: formData.get("email").trim().toLowerCase(),
           organization_id: currentOrgId,
           status: "active"
-        });
+        };
+
+        console.log(
+          "AXION LMS → creando participante:",
+          participant
+        );
+
+        const created =
+          await Repository.createPerson(participant);
+
+        console.log(
+          "AXION LMS → participante creado:",
+          created
+        );
 
         modal.close();
+
         await participantsPage();
 
       } catch (err) {
-        alert(
-          "No se pudo registrar al participante:\n\n" +
-          err.message
+
+        console.error(
+          "AXION LMS createPerson error:",
+          err
         );
 
-        console.error("AXION LMS createPerson:", err);
+        alert(
+          "No se pudo registrar al participante:\n\n" +
+          (err.message || JSON.stringify(err))
+        );
 
       } finally {
+
         button.disabled = false;
         button.textContent = originalText;
+
       }
-    };
-  }
-}, 0);
+
+    });
+
+  };
 }
 async function coursesPage(){
- header("Cursos","Catálogo y estructura de aprendizaje",`<button class="primary" id="newCourse">Nuevo curso</button>`);
- const rows=await Repository.listCourses(currentOrgId);
- content.innerHTML=`<div class="grid cols-2">${rows.map(c=>`<div class="card"><h3>${escapeHtml(c.code)} · ${escapeHtml(c.title)}</h3>
- <p class="muted">${escapeHtml(c.description||"")}</p><p><span class="badge">${c.lessons?.length||0} lecciones</span> <span class="badge">Aprobación ${c.pass_score}%</span></p>
- <div class="actions"><button class="ghost addLesson" data-id="${c.id}">Agregar lección</button><button class="ghost addAssessment" data-id="${c.id}">Evaluación rápida</button></div></div>`).join("")||`<div class="card">Aún no hay cursos.</div>`}</div>`;
- $("#newCourse").onclick=()=>showModal(`<h3>Nuevo curso</h3><form id="courseForm" class="stack">
- <label>Código<input name="code" required placeholder="COT-SEG-001"></label><label>Título<input name="title" required></label>
- <label>Descripción<textarea name="description"></textarea></label><label>Calificación mínima<input name="pass_score" type="number" min="0" max="100" value="80"></label>
- <button class="primary">Crear curso</button></form>`);
- setTimeout(()=>{const f=$("#courseForm");if(f)f.onsubmit=async e=>{e.preventDefault();const o=Object.fromEntries(new FormData(f));await Repository.createCourse({...o,pass_score:+o.pass_score,organization_id:currentOrgId,status:"published",created_by:currentUser.id});modal.close();coursesPage();}},0);
- content.querySelectorAll(".addLesson").forEach(b=>b.onclick=()=>lessonModal(b.dataset.id));
- content.querySelectorAll(".addAssessment").forEach(b=>b.onclick=()=>assessmentModal(b.dataset.id));
+
+  header(
+    "Cursos",
+    "Catálogo y estructura de aprendizaje",
+    `<button class="primary" id="newCourse">Nuevo curso</button>`
+  );
+
+  const rows = await Repository.listCourses(currentOrgId);
+
+  content.innerHTML = `
+    <div class="grid cols-2">
+
+      ${
+        rows.map(c => `
+          <div class="card">
+
+            <h3>
+              ${escapeHtml(c.code)}
+              ·
+              ${escapeHtml(c.title)}
+            </h3>
+
+            <p class="muted">
+              ${escapeHtml(c.description || "")}
+            </p>
+
+            <p>
+              <span class="badge">
+                ${c.lessons?.length || 0} lecciones
+              </span>
+
+              <span class="badge">
+                Aprobación ${c.pass_score}%
+              </span>
+            </p>
+
+            <div class="actions">
+
+              <button
+                class="ghost addLesson"
+                data-id="${c.id}">
+                Agregar lección
+              </button>
+
+              <button
+                class="ghost addAssessment"
+                data-id="${c.id}">
+                Evaluación rápida
+              </button>
+
+            </div>
+
+          </div>
+        `).join("")
+        ||
+        `<div class="card">Aún no hay cursos.</div>`
+      }
+
+    </div>
+  `;
+
+  $("#newCourse").onclick = () => {
+
+    showModal(`
+      <h3>Nuevo curso</h3>
+
+      <form id="courseForm" class="stack">
+
+        <label>
+          Código
+          <input
+            name="code"
+            required
+            placeholder="COT-SEG-001">
+        </label>
+
+        <label>
+          Título
+          <input
+            name="title"
+            required>
+        </label>
+
+        <label>
+          Descripción
+          <textarea name="description"></textarea>
+        </label>
+
+        <label>
+          Calificación mínima
+          <input
+            name="pass_score"
+            type="number"
+            min="0"
+            max="100"
+            value="80">
+        </label>
+
+        <button
+          type="submit"
+          class="primary">
+          Crear curso
+        </button>
+
+      </form>
+    `);
+
+    const f = $("#courseForm");
+
+    f.addEventListener("submit", async e => {
+
+      e.preventDefault();
+      e.stopPropagation();
+
+      const button =
+        f.querySelector('button[type="submit"]');
+
+      const originalText =
+        button.textContent;
+
+      try {
+
+        button.disabled = true;
+        button.textContent = "Guardando...";
+
+        const formData =
+          new FormData(f);
+
+        const course = {
+          code:
+            formData.get("code")
+              .trim()
+              .toUpperCase(),
+
+          title:
+            formData.get("title")
+              .trim(),
+
+          description:
+            formData.get("description")
+              .trim(),
+
+          pass_score:
+            Number(formData.get("pass_score")),
+
+          organization_id:
+            currentOrgId,
+
+          status:
+            "published",
+
+          created_by:
+            currentUser.id
+        };
+
+        console.log(
+          "AXION LMS → creando curso:",
+          course
+        );
+
+        const created =
+          await Repository.createCourse(course);
+
+        console.log(
+          "AXION LMS → curso creado:",
+          created
+        );
+
+        modal.close();
+
+        await coursesPage();
+
+      } catch (err) {
+
+        console.error(
+          "AXION LMS createCourse error:",
+          err
+        );
+
+        alert(
+          "No se pudo crear el curso:\n\n" +
+          (err.message || JSON.stringify(err))
+        );
+
+      } finally {
+
+        button.disabled = false;
+        button.textContent = originalText;
+
+      }
+
+    });
+
+  };
+
+  content
+    .querySelectorAll(".addLesson")
+    .forEach(
+      b => b.onclick =
+        () => lessonModal(b.dataset.id)
+    );
+
+  content
+    .querySelectorAll(".addAssessment")
+    .forEach(
+      b => b.onclick =
+        () => assessmentModal(b.dataset.id)
+    );
 }
 
 function lessonModal(courseId){
