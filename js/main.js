@@ -72,7 +72,7 @@ async function adminDashboard(){
  <div class="card section"><h3>Arquitectura activa</h3><p class="muted">UI → Services → Engines → Repository → PostgreSQL/RLS. Los eventos críticos se registran mediante Audit Engine.</p></div>`;
 }
 
-async function participantsPage(){
+async function participantsPage() {
   header(
     "Participantes",
     "Personas de la empresa",
@@ -91,17 +91,27 @@ async function participantsPage(){
             <th>Estado</th>
           </tr>
         </thead>
+
         <tbody>
           ${
             rows.map(p => `
               <tr>
-                <td>${escapeHtml(p.first_name)} ${escapeHtml(p.last_name)}</td>
+                <td>
+                  ${escapeHtml(p.first_name)}
+                  ${escapeHtml(p.last_name)}
+                </td>
                 <td>${escapeHtml(p.email)}</td>
-                <td><span class="badge">${escapeHtml(p.status)}</span></td>
+                <td>
+                  <span class="badge">
+                    ${escapeHtml(p.status)}
+                  </span>
+                </td>
               </tr>
             `).join("")
             ||
-            `<tr><td colspan="3">Sin participantes.</td></tr>`
+            `<tr>
+              <td colspan="3">Sin participantes.</td>
+            </tr>`
           }
         </tbody>
       </table>
@@ -113,92 +123,117 @@ async function participantsPage(){
     showModal(`
       <h3>Nuevo participante</h3>
 
-      <form id="personForm" class="stack">
+      <div class="stack">
 
         <label>
           Nombre
-          <input name="first_name" required>
+          <input id="personFirstName" required>
         </label>
 
         <label>
           Apellidos
-          <input name="last_name" required>
+          <input id="personLastName" required>
         </label>
 
         <label>
           Email
-          <input name="email" type="email" required>
+          <input
+            id="personEmail"
+            type="email"
+            required>
         </label>
 
-        <button type="submit" class="primary">
+        <button
+          type="button"
+          class="primary"
+          id="savePerson">
           Crear
         </button>
 
-      </form>
+        <p id="personMessage" class="message"></p>
+
+      </div>
     `);
 
-    const f = $("#personForm");
+    $("#savePerson").onclick = async () => {
 
-    f.addEventListener("submit", async e => {
+      const firstName =
+        $("#personFirstName").value.trim();
 
-      e.preventDefault();
-      e.stopPropagation();
+      const lastName =
+        $("#personLastName").value.trim();
 
-      const button = f.querySelector('button[type="submit"]');
-      const originalText = button.textContent;
+      const email =
+        $("#personEmail").value.trim().toLowerCase();
+
+      const message =
+        $("#personMessage");
+
+      if (!firstName || !lastName || !email) {
+        message.textContent =
+          "Completa nombre, apellidos y email.";
+        return;
+      }
+
+      const button =
+        $("#savePerson");
 
       try {
 
         button.disabled = true;
         button.textContent = "Guardando...";
 
-        const formData = new FormData(f);
-
-        const participant = {
-          first_name: formData.get("first_name").trim(),
-          last_name: formData.get("last_name").trim(),
-          email: formData.get("email").trim().toLowerCase(),
-          organization_id: currentOrgId,
-          status: "active"
-        };
+        message.textContent =
+          "Registrando participante...";
 
         console.log(
-          "AXION LMS → creando participante:",
-          participant
+          "AXION LMS creando participante",
+          {
+            firstName,
+            lastName,
+            email,
+            organization: currentOrgId
+          }
         );
 
         const created =
-          await Repository.createPerson(participant);
+          await Repository.createPerson({
+            first_name: firstName,
+            last_name: lastName,
+            email: email,
+            organization_id: currentOrgId,
+            status: "active"
+          });
 
         console.log(
-          "AXION LMS → participante creado:",
+          "Participante creado:",
           created
         );
 
-        modal.close();
+        message.textContent =
+          "Participante registrado correctamente.";
 
-        await participantsPage();
+        setTimeout(async () => {
+          modal.close();
+          await participantsPage();
+        }, 400);
 
       } catch (err) {
 
         console.error(
-          "AXION LMS createPerson error:",
+          "Error creando participante:",
           err
         );
 
-        alert(
-          "No se pudo registrar al participante:\n\n" +
-          (err.message || JSON.stringify(err))
-        );
-
-      } finally {
+        message.textContent =
+          "ERROR: " +
+          (err.message || JSON.stringify(err));
 
         button.disabled = false;
-        button.textContent = originalText;
-
+        button.textContent = "Crear";
       }
 
-    });
+    };
 
   };
 }
