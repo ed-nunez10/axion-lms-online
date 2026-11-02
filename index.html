@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="description" content="AXION LMS - Learning & Training Intelligence">
+  <title>AXION LMS</title>
+  <link rel="stylesheet" href="./css/app.css">
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <span class="brand-mark">A</span>
+      <div><strong>AXION LMS</strong><small>Learning & Training Intelligence</small></div>
+    </div>
+    <div id="sessionArea"></div>
+  </header>
+
+  <main class="shell">
+    <section id="authView" class="auth-grid">
+      <article class="hero-panel">
+        <p class="eyebrow">AXION OS · TRAINING</p>
+        <h1>Capacitación trazable, no solo cursos.</h1>
+        <p class="lead">Necesidad → Asignación → Aprendizaje → Evaluación → Evidencia → Competencia → Certificación → Vigencia → Reentrenamiento.</p>
+        <div class="architecture-strip">
+          <span>Data</span><span>Rules</span><span>Engines</span><span>Audit</span>
+        </div>
+      </article>
+
+      <article class="card auth-card">
+        <div class="tabs">
+          <button class="tab active" data-auth-tab="login">Iniciar sesión</button>
+          <button class="tab" data-auth-tab="signup">Activar cuenta</button>
+        </div>
+        <form id="loginForm" class="stack">
+          <label>Email<input id="loginEmail" type="email" required></label>
+          <label>Contraseña<input id="loginPassword" type="password" required minlength="6"></label>
+          <button class="primary">Entrar</button>
+        </form>
+        <form id="signupForm" class="stack hidden">
+          <p class="muted">Usa el mismo email que registró el administrador como participante.</p>
+          <label>Email<input id="signupEmail" type="email" required></label>
+          <label>Contraseña<input id="signupPassword" type="password" required minlength="6"></label>
+          <button class="primary">Activar cuenta</button>
+        </form>
+        <p id="authMessage" class="message"></p>
+      </article>
+    </section>
+
+    <section id="appView" class="hidden">
+      <div class="app-layout">
+        <aside class="sidebar">
+          <div id="userBadge" class="user-badge"></div>
+          <nav id="nav"></nav>
+        </aside>
+        <section class="workspace">
+          <div id="pageHeader"></div>
+          <div id="content"></div>
+        </section>
+      </div>
+    </section>
+  </main>
+
+  <dialog id="modal"><div id="modalBody"></div><button class="ghost" id="closeModal">Cerrar</button></dialog>
+  <script type="module" src="./js/main.js"></script>
+</body>
+</html>
