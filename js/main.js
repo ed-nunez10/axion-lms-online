@@ -468,15 +468,162 @@ function assessmentModal(courseId){
  }},0);
 }
 
-async function assignmentsPage(){
- header("Asignaciones","Enrollment Engine",`<button class="primary" id="newAssign">Asignar curso</button>`);
- const [people,courses]=await Promise.all([Repository.listPersons(currentOrgId),Repository.listCourses(currentOrgId)]);
- content.innerHTML=`<div class="card"><h3>Flujo</h3><p class="muted">Una asignación crea el vínculo formal entre participante y curso. A partir de aquí todo progreso, intento, resultado y certificado queda ligado al enrollment.</p></div>`;
- $("#newAssign").onclick=()=>showModal(`<h3>Asignar curso</h3><form id="assignForm" class="stack">
- <label>Participante<select name="person_id">${people.map(p=>`<option value="${p.id}">${escapeHtml(p.first_name)} ${escapeHtml(p.last_name)} · ${escapeHtml(p.email)}</option>`).join("")}</select></label>
- <label>Curso<select name="course_id">${courses.map(c=>`<option value="${c.id}">${escapeHtml(c.code)} · ${escapeHtml(c.title)}</option>`).join("")}</select></label>
- <button class="primary">Asignar</button></form>`);
- setTimeout(()=>{const f=$("#assignForm");if(f)f.onsubmit=async e=>{e.preventDefault();const o=Object.fromEntries(new FormData(f));await EnrollmentEngine.assign({organizationId:currentOrgId,personId:o.person_id,courseId:o.course_id,assignedBy:currentUser.id});modal.close();content.insertAdjacentHTML("beforeend",`<div class="card section"><span class="badge ok">Asignación creada</span></div>`);}},0);
+async function assignmentsPage() {
+
+  header(
+    "Asignaciones",
+    "Enrollment Engine",
+    `<button class="primary" id="newAssign">Asignar curso</button>`
+  );
+
+  const [people, courses] = await Promise.all([
+    Repository.listPersons(currentOrgId),
+    Repository.listCourses(currentOrgId)
+  ]);
+
+  content.innerHTML = `
+    <div class="card">
+      <h3>Flujo de asignación</h3>
+      <p class="muted">
+        Vincula formalmente un participante con un curso.
+        A partir de esta asignación se registrarán progreso,
+        intentos, resultados y certificación.
+      </p>
+    </div>
+  `;
+
+  $("#newAssign").onclick = () => {
+
+    if (!people.length) {
+      alert("Primero debes registrar al menos un participante.");
+      return;
+    }
+
+    if (!courses.length) {
+      alert("Primero debes crear al menos un curso.");
+      return;
+    }
+
+    showModal(`
+      <h3>Asignar curso</h3>
+
+      <div class="stack">
+
+        <label>
+          Participante
+          <select id="assignPerson">
+            ${
+              people.map(p => `
+                <option value="${p.id}">
+                  ${escapeHtml(p.first_name)}
+                  ${escapeHtml(p.last_name)}
+                  ·
+                  ${escapeHtml(p.email)}
+                </option>
+              `).join("")
+            }
+          </select>
+        </label>
+
+        <label>
+          Curso
+          <select id="assignCourse">
+            ${
+              courses.map(c => `
+                <option value="${c.id}">
+                  ${escapeHtml(c.code)}
+                  ·
+                  ${escapeHtml(c.title)}
+                </option>
+              `).join("")
+            }
+          </select>
+        </label>
+
+        <button
+          type="button"
+          class="primary"
+          id="saveAssignment">
+          Asignar curso
+        </button>
+
+        <p id="assignmentMessage" class="message"></p>
+
+      </div>
+    `);
+
+    $("#saveAssignment").onclick = async () => {
+
+      const personId =
+        $("#assignPerson").value;
+
+      const courseId =
+        $("#assignCourse").value;
+
+      const message =
+        $("#assignmentMessage");
+
+      const button =
+        $("#saveAssignment");
+
+      try {
+
+        button.disabled = true;
+        button.textContent = "Asignando...";
+
+        message.textContent =
+          "Creando asignación...";
+
+        console.log(
+          "AXION LMS → creando asignación",
+          {
+            organizationId: currentOrgId,
+            personId,
+            courseId,
+            assignedBy: currentUser.id
+          }
+        );
+
+        const created =
+          await EnrollmentEngine.assign({
+            organizationId: currentOrgId,
+            personId,
+            courseId,
+            assignedBy: currentUser.id
+          });
+
+        console.log(
+          "AXION LMS → asignación creada:",
+          created
+        );
+
+        message.textContent =
+          "Curso asignado correctamente.";
+
+        setTimeout(() => {
+          modal.close();
+          assignmentsPage();
+        }, 400);
+
+      } catch (err) {
+
+        console.error(
+          "AXION LMS assignment error:",
+          err
+        );
+
+        message.textContent =
+          "ERROR: " +
+          (err.message || JSON.stringify(err));
+
+        button.disabled = false;
+        button.textContent = "Asignar curso";
+      }
+
+    };
+
+  };
+
 }
 
 async function participantDashboard(){
