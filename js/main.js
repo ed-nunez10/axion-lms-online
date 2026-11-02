@@ -58,7 +58,7 @@ function renderNav(){
  nav.querySelectorAll("button").forEach(b=>b.onclick=()=>{
    nav.querySelectorAll("button").forEach(x=>x.classList.toggle("active",x===b));
    const p=b.dataset.page;
-   ({dashboard:adminDashboard,participants:participantsPage,courses:coursesPage,assignments:assignmentsPage,learning:participantDashboard}[p])();
+  ({dashboard:adminDashboard,participants:participantsPage,courses:coursesPage,assignments:assignmentsPageV2,learning:participantDashboard}[p])();
  });
 }
 
@@ -625,7 +625,168 @@ async function assignmentsPage() {
   };
 
 }
+async function assignmentsPageV2() {
 
+  header(
+    "Asignaciones",
+    "Enrollment Engine · versión de prueba",
+    `<button type="button" class="primary" id="newAssignV2">
+      Asignar curso
+    </button>`
+  );
+
+  const [people, courses] = await Promise.all([
+    Repository.listPersons(currentOrgId),
+    Repository.listCourses(currentOrgId)
+  ]);
+
+  content.innerHTML = `
+    <div class="card">
+      <h3>Asignación de capacitación</h3>
+
+      <p class="muted">
+        Participantes disponibles: ${people.length}
+        · Cursos disponibles: ${courses.length}
+      </p>
+
+      <div id="assignmentStatus"></div>
+    </div>
+  `;
+
+  const button = $("#newAssignV2");
+
+  button.onclick = () => {
+
+    showModal(`
+      <h3>Asignar curso</h3>
+
+      <div class="stack">
+
+        <label>
+          Participante
+          <select id="assignPersonV2">
+            ${people.map(p => `
+              <option value="${p.id}">
+                ${escapeHtml(p.first_name)}
+                ${escapeHtml(p.last_name)}
+                · ${escapeHtml(p.email)}
+              </option>
+            `).join("")}
+          </select>
+        </label>
+
+        <label>
+          Curso
+          <select id="assignCourseV2">
+            ${courses.map(c => `
+              <option value="${c.id}">
+                ${escapeHtml(c.code)}
+                · ${escapeHtml(c.title)}
+              </option>
+            `).join("")}
+          </select>
+        </label>
+
+        <button
+          type="button"
+          class="primary"
+          id="confirmAssignV2">
+          Confirmar asignación
+        </button>
+
+        <p
+          id="assignMessageV2"
+          class="message">
+        </p>
+
+      </div>
+    `);
+
+    $("#confirmAssignV2").onclick = async () => {
+
+      const personId =
+        $("#assignPersonV2").value;
+
+      const courseId =
+        $("#assignCourseV2").value;
+
+      const message =
+        $("#assignMessageV2");
+
+      const saveButton =
+        $("#confirmAssignV2");
+
+      try {
+
+        saveButton.disabled = true;
+
+        saveButton.textContent =
+          "Asignando...";
+
+        message.textContent =
+          "Enviando asignación a Supabase...";
+
+        const result =
+          await Repository.enroll({
+
+            organization_id:
+              currentOrgId,
+
+            person_id:
+              personId,
+
+            course_id:
+              courseId,
+
+            assigned_by:
+              currentUser.id,
+
+            status:
+              "assigned"
+
+          });
+
+        console.log(
+          "AXION LMS enrollment creado:",
+          result
+        );
+
+        message.textContent =
+          "✓ Curso asignado correctamente";
+
+        await Repository.audit(
+          "enrollment.assigned",
+          "enrollment",
+          result.id,
+          {
+            person_id: personId,
+            course_id: courseId
+          }
+        );
+
+      } catch (err) {
+
+        console.error(
+          "AXION LMS enrollment error:",
+          err
+        );
+
+        message.textContent =
+          "ERROR: " +
+          (err.message || JSON.stringify(err));
+
+        saveButton.disabled = false;
+
+        saveButton.textContent =
+          "Confirmar asignación";
+
+      }
+
+    };
+
+  };
+
+}
 async function participantDashboard(){
  header("Mi aprendizaje","Cursos asignados, progreso y evaluación");
  if(!currentUser.person_id){content.innerHTML=`<div class="card"><h3>Cuenta sin participante vinculado</h3><p>El email de esta cuenta debe coincidir con un participante creado por el administrador.</p></div>`;return;}
